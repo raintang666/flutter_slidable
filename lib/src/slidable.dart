@@ -11,12 +11,18 @@ import 'scrolling_behavior.dart';
 
 part 'action_pane.dart';
 
+/// Signature for [Slidable.onDragStart].
+typedef SlidableDragStartCallback = void Function(DragStartDetails details);
+
 /// Signature for [Slidable.onDragUpdate].
 ///
 /// The [ratio] is the current drag ratio of the full size of the [Slidable]
 /// after the drag update has been applied.
 typedef SlidableDragUpdateCallback =
     void Function(DragUpdateDetails details, double ratio);
+
+/// Signature for [Slidable.onDragEnd].
+typedef SlidableDragEndCallback = void Function(DragEndDetails details);
 
 /// A widget which can be dragged to reveal contextual actions.
 class Slidable extends StatefulWidget {
@@ -35,7 +41,9 @@ class Slidable extends StatefulWidget {
     this.direction = Axis.horizontal,
     this.dragStartBehavior = DragStartBehavior.down,
     this.useTextDirection = true,
+    this.onDragStart,
     this.onDragUpdate,
+    this.onDragEnd,
     required this.child,
   });
 
@@ -108,11 +116,17 @@ class Slidable extends StatefulWidget {
   ///  * [DragGestureRecognizer.dragStartBehavior], which gives an example for the different behaviors.
   final DragStartBehavior dragStartBehavior;
 
+  /// Called when the user starts dragging this [Slidable].
+  final SlidableDragStartCallback? onDragStart;
+
   /// Called whenever this [Slidable] is dragged by the user.
   ///
   /// The callback receives the original [DragUpdateDetails] and the current
   /// drag ratio after the update has been applied.
   final SlidableDragUpdateCallback? onDragUpdate;
+
+  /// Called when the user stops dragging this [Slidable].
+  final SlidableDragEndCallback? onDragEnd;
 
   /// The widget below this widget in the tree.
   ///
@@ -288,7 +302,9 @@ class _SlidableState extends State<Slidable>
       controller: controller,
       direction: widget.direction,
       dragStartBehavior: widget.dragStartBehavior,
+      onDragStart: widget.onDragStart,
       onDragUpdate: widget.onDragUpdate,
+      onDragEnd: widget.onDragEnd,
       child: SlidableNotificationSender(
         tag: widget.groupTag,
         controller: controller,

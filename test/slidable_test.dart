@@ -198,10 +198,13 @@ void main() {
     });
   });
 
-  testWidgets('onDragUpdate is called with the current drag ratio',
+  testWidgets('drag callbacks are called with their drag details',
       (tester) async {
+    final events = <String>[];
     final ratios = <double>[];
+    DragStartDetails? dragStartDetails;
     DragUpdateDetails? dragUpdateDetails;
+    DragEndDetails? dragEndDetails;
     final findSlidable = find.byType(Slidable);
 
     await tester.pumpWidget(
@@ -211,9 +214,18 @@ void main() {
           width: 100,
           height: 100,
           child: Slidable(
+            onDragStart: (details) {
+              dragStartDetails = details;
+              events.add('start');
+            },
             onDragUpdate: (details, ratio) {
               dragUpdateDetails = details;
               ratios.add(ratio);
+              events.add('update');
+            },
+            onDragEnd: (details) {
+              dragEndDetails = details;
+              events.add('end');
             },
             startActionPane: ActionPane(
               motion: const ScrollMotion(),
@@ -229,7 +241,11 @@ void main() {
 
     await tester.drag(findSlidable, const Offset(10, 0));
 
+    expect(dragStartDetails, isNotNull);
     expect(dragUpdateDetails, isNotNull);
+    expect(dragEndDetails, isNotNull);
+    expect(events.first, 'start');
+    expect(events.last, 'end');
     expect(ratios, isNotEmpty);
     expect(
       ratios.last,
