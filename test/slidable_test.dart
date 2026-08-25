@@ -198,6 +198,45 @@ void main() {
     });
   });
 
+  testWidgets('onDragUpdate is called with the current drag ratio',
+      (tester) async {
+    final ratios = <double>[];
+    DragUpdateDetails? dragUpdateDetails;
+    final findSlidable = find.byType(Slidable);
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 100,
+          height: 100,
+          child: Slidable(
+            onDragUpdate: (details, ratio) {
+              dragUpdateDetails = details;
+              ratios.add(ratio);
+            },
+            startActionPane: ActionPane(
+              motion: const ScrollMotion(),
+              children: [
+                SlidableAction(onPressed: (_) {}, icon: Icons.share),
+              ],
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.drag(findSlidable, const Offset(10, 0));
+
+    expect(dragUpdateDetails, isNotNull);
+    expect(ratios, isNotEmpty);
+    expect(
+      ratios.last,
+      moreOrLessEquals(10 / tester.getSize(findSlidable).width),
+    );
+  });
+
   testWidgets('cannot drag to show startActionPane if null', (tester) async {
     const gestureDetectorKey = ValueKey('gesture_detector');
     const endActionPaneKey = ValueKey('end');

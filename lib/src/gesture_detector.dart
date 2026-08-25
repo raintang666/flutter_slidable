@@ -14,12 +14,14 @@ class SlidableGestureDetector extends StatefulWidget {
     required this.direction,
     required this.child,
     this.dragStartBehavior = DragStartBehavior.start,
+    this.onDragUpdate,
   });
 
   final SlidableController controller;
   final Widget child;
   final Axis direction;
   final bool enabled;
+  final void Function(DragUpdateDetails details, double ratio)? onDragUpdate;
 
   /// Determines the way that drag start behavior is handled.
   ///
@@ -88,6 +90,7 @@ class _SlidableGestureDetectorState extends State<SlidableGestureDetector> {
     dragExtent += delta;
     lastPosition = details.localPosition;
     widget.controller.ratio = dragExtent / overallDragAxisExtent;
+    widget.onDragUpdate?.call(details, widget.controller.ratio);
   }
 
   void handleDragEnd(DragEndDetails details) {

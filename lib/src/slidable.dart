@@ -11,6 +11,13 @@ import 'scrolling_behavior.dart';
 
 part 'action_pane.dart';
 
+/// Signature for [Slidable.onDragUpdate].
+///
+/// The [ratio] is the current drag ratio of the full size of the [Slidable]
+/// after the drag update has been applied.
+typedef SlidableDragUpdateCallback =
+    void Function(DragUpdateDetails details, double ratio);
+
 /// A widget which can be dragged to reveal contextual actions.
 class Slidable extends StatefulWidget {
   /// Creates a [Slidable].
@@ -28,6 +35,7 @@ class Slidable extends StatefulWidget {
     this.direction = Axis.horizontal,
     this.dragStartBehavior = DragStartBehavior.down,
     this.useTextDirection = true,
+    this.onDragUpdate,
     required this.child,
   });
 
@@ -99,6 +107,12 @@ class Slidable extends StatefulWidget {
   ///
   ///  * [DragGestureRecognizer.dragStartBehavior], which gives an example for the different behaviors.
   final DragStartBehavior dragStartBehavior;
+
+  /// Called whenever this [Slidable] is dragged by the user.
+  ///
+  /// The callback receives the original [DragUpdateDetails] and the current
+  /// drag ratio after the update has been applied.
+  final SlidableDragUpdateCallback? onDragUpdate;
 
   /// The widget below this widget in the tree.
   ///
@@ -274,6 +288,7 @@ class _SlidableState extends State<Slidable>
       controller: controller,
       direction: widget.direction,
       dragStartBehavior: widget.dragStartBehavior,
+      onDragUpdate: widget.onDragUpdate,
       child: SlidableNotificationSender(
         tag: widget.groupTag,
         controller: controller,
