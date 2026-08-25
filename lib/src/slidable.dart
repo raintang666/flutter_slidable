@@ -14,12 +14,8 @@ part 'action_pane.dart';
 /// Signature for [Slidable.onDragStart].
 typedef SlidableDragStartCallback = void Function(DragStartDetails details);
 
-/// Signature for [Slidable.onDragUpdate].
-///
-/// The [ratio] is the current drag ratio of the full size of the [Slidable]
-/// after the drag update has been applied.
-typedef SlidableDragUpdateCallback =
-    void Function(DragUpdateDetails details, double ratio);
+/// Signature for [Slidable.progressUpdate].
+typedef SlidableProgressUpdateCallback = void Function(double progress);
 
 /// Signature for [Slidable.onDragEnd].
 typedef SlidableDragEndCallback = void Function(DragEndDetails details);
@@ -42,7 +38,7 @@ class Slidable extends StatefulWidget {
     this.dragStartBehavior = DragStartBehavior.down,
     this.useTextDirection = true,
     this.onDragStart,
-    this.onDragUpdate,
+    this.progressUpdate,
     this.onDragEnd,
     required this.child,
   });
@@ -119,11 +115,14 @@ class Slidable extends StatefulWidget {
   /// Called when the user starts dragging this [Slidable].
   final SlidableDragStartCallback? onDragStart;
 
-  /// Called whenever this [Slidable] is dragged by the user.
+  /// Called whenever the visible progress of this [Slidable] changes.
   ///
-  /// The callback receives the original [DragUpdateDetails] and the current
-  /// drag ratio after the update has been applied.
-  final SlidableDragUpdateCallback? onDragUpdate;
+  /// The [progress] is normalized between 0 and 1. It is 0 when the
+  /// [Slidable] is closed and 1 when the current action pane is fully open.
+  ///
+  /// This callback is also called while the [Slidable] is automatically
+  /// opening or closing after the user's finger is released.
+  final SlidableProgressUpdateCallback? progressUpdate;
 
   /// Called when the user stops dragging this [Slidable].
   final SlidableDragEndCallback? onDragEnd;
@@ -167,7 +166,8 @@ class _SlidableState extends State<Slidable>
   void initState() {
     super.initState();
     controller = (widget.controller ?? SlidableController(this))
-      ..actionPaneType.addListener(handleActionPanelTypeChanged);
+      ..actionPaneType.addListener(handleActionPanelTypeChanged)
+      ..animation.addListener(handleProgressChanged);
   }
 
   @override
@@ -184,9 +184,11 @@ class _SlidableState extends State<Slidable>
 
     if (oldWidget.controller != widget.controller) {
       controller.actionPaneType.removeListener(handleActionPanelTypeChanged);
+      controller.animation.removeListener(handleProgressChanged);
 
       controller = (widget.controller ?? SlidableController(this))
-        ..actionPaneType.addListener(handleActionPanelTypeChanged);
+        ..actionPaneType.addListener(handleActionPanelTypeChanged)
+        ..animation.addListener(handleProgressChanged);
     }
 
     updateIsLeftToRight();
@@ -196,6 +198,7 @@ class _SlidableState extends State<Slidable>
   @override
   void dispose() {
     controller.actionPaneType.removeListener(handleActionPanelTypeChanged);
+    controller.animation.removeListener(handleProgressChanged);
 
     if (controller != widget.controller) {
       controller.dispose();
@@ -230,6 +233,16 @@ class _SlidableState extends State<Slidable>
     if (controller.resizeRequest.value != null) {
       setState(() {});
     }
+  }
+
+  void handleProgressChanged() {
+    final extentRatio = controller.direction.value >= 0
+        ? startActionPane?.extentRatio
+        : endActionPane?.extentRatio;
+    final progress = extentRatio == null || extentRatio == 0
+        ? 0.0
+        : (controller.ratio.abs() / extentRatio).clamp(0.0, 1.0).toDouble();
+    widget.progressUpdate?.call(progress);
   }
 
   void updateMoveAnimation() {
@@ -303,7 +316,6 @@ class _SlidableState extends State<Slidable>
       direction: widget.direction,
       dragStartBehavior: widget.dragStartBehavior,
       onDragStart: widget.onDragStart,
-      onDragUpdate: widget.onDragUpdate,
       onDragEnd: widget.onDragEnd,
       child: SlidableNotificationSender(
         tag: widget.groupTag,

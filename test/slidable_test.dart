@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/src/action_pane_motions.dart';
 import 'package:flutter_slidable/src/actions.dart';
+import 'package:flutter_slidable/src/controller.dart';
 import 'package:flutter_slidable/src/slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -198,13 +199,12 @@ void main() {
     });
   });
 
-  testWidgets('drag callbacks are called with their drag details',
-      (tester) async {
+  testWidgets('drag callbacks and progress update are called', (tester) async {
     final events = <String>[];
-    final ratios = <double>[];
+    final progresses = <double>[];
     DragStartDetails? dragStartDetails;
-    DragUpdateDetails? dragUpdateDetails;
     DragEndDetails? dragEndDetails;
+    SlidableController? controller;
     final findSlidable = find.byType(Slidable);
 
     await tester.pumpWidget(
@@ -214,14 +214,10 @@ void main() {
           width: 100,
           height: 100,
           child: Slidable(
+            progressUpdate: progresses.add,
             onDragStart: (details) {
               dragStartDetails = details;
               events.add('start');
-            },
-            onDragUpdate: (details, ratio) {
-              dragUpdateDetails = details;
-              ratios.add(ratio);
-              events.add('update');
             },
             onDragEnd: (details) {
               dragEndDetails = details;
@@ -233,24 +229,34 @@ void main() {
                 SlidableAction(onPressed: (_) {}, icon: Icons.share),
               ],
             ),
-            child: const SizedBox.expand(),
+            child: Builder(
+              builder: (context) {
+                controller = Slidable.of(context);
+                return const SizedBox.expand();
+              },
+            ),
           ),
         ),
       ),
     );
 
-    await tester.drag(findSlidable, const Offset(10, 0));
+    await tester.drag(findSlidable, const Offset(300, 0));
 
     expect(dragStartDetails, isNotNull);
-    expect(dragUpdateDetails, isNotNull);
     expect(dragEndDetails, isNotNull);
     expect(events.first, 'start');
     expect(events.last, 'end');
-    expect(ratios, isNotEmpty);
-    expect(
-      ratios.last,
-      moreOrLessEquals(10 / tester.getSize(findSlidable).width),
-    );
+    expect(progresses, isNotEmpty);
+
+    controller!.ratio = 0.25;
+    await tester.pump();
+    controller!.ratio = 0.5;
+    await tester.pump();
+    expect(progresses.last, closeTo(1, 1e-10));
+
+    controller!.ratio = 0;
+    await tester.pump();
+    expect(progresses.last, closeTo(0, 1e-10));
   });
 
   testWidgets('cannot drag to show startActionPane if null', (tester) async {
